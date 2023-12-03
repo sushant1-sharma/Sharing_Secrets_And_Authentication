@@ -70,7 +70,7 @@ passport.use(new GoogleStrategy({
   function(accessToken, refreshToken, profile, cb) {
     console.log(profile);
 
-    User.findOrCreate({ googleId: profile.id, username: 'googleUser' }, function (err, user) {
+    User.findOrCreate({ googleId: profile.id, username: `googleUser_${profile.id}` }, function (err, user) {
       return cb(err, user);
     });
   }
@@ -141,21 +141,34 @@ app.get("/logout", function(req, res){
   res.redirect("/");
 });
 
-app.post("/register", function(req, res){
+app.post("/register", async function (req, res) {
+  const newUsername = req.body.username;
+  const newPassword = req.body.password;
 
-  User.register({username: req.body.username}, req.body.password, function(err, user){
-    if (err) {
-      console.log(err);
-      console.log("abc");
-      res.redirect("/register");
-    } else {
-      passport.authenticate("local")(req, res, function(){
-        res.redirect("/secrets");
-      });
+  try {
+    const existingUser = await User.findOne({ username: newUsername });
+
+    if (existingUser) {
+      // User already exists, redirect to register with a message
+      console.log("already registered");
+      return res.render("home", { registrationMessage: "User already registered. Please log in." });
     }
-  });
 
+    // User doesn't exist, proceed with registration
+    const user = new User({ username: newUsername });
+    await user.setPassword(newPassword);
+    await user.save();
+
+    // Registration successful, redirect to login
+    res.render("login", { registrationMessage: "Registration successful. Please log in." });
+  } catch (err) {
+    console.log(err);
+    res.redirect("/register");
+  }
 });
+
+
+
 
 app.post("/login", function(req, res){
 
