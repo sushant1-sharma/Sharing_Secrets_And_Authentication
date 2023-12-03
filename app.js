@@ -38,7 +38,8 @@ const userSchema = new mongoose.Schema ({
   email: String,
   password: String,
   googleId: String,
-  secret: String
+  secret: String,
+  username: String
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -69,7 +70,7 @@ passport.use(new GoogleStrategy({
   function(accessToken, refreshToken, profile, cb) {
     console.log(profile);
 
-    User.findOrCreate({ googleId: profile.id }, function (err, user) {
+    User.findOrCreate({ googleId: profile.id, username: 'googleUser' }, function (err, user) {
       return cb(err, user);
     });
   }
