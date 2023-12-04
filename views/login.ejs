@@ -35,7 +35,14 @@
         </div>
       </div>
     </div>
-
+    <div class="container">
+      <!-- Add this block to display registration messages -->
+      <% if (typeof registrationMessage !== 'undefined') { %>
+      <div class="alert alert-warning" role="alert">
+        <%= registrationMessage %>
+      </div>
+      <% } %>
+    </div>
   </div>
 </div>
 

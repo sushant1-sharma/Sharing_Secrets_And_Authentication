@@ -34,35 +34,34 @@ mongoose.connect(
   `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.piqwrgw.mongodb.net/AuthenticationSecurity`,
   {
     useNewUrlParser: true,
-    useUnifiedTopology: true,
+    useUnifiedTopology: true
   }
 );
+
 
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
-  secret: String,
-  username: String,
-  username: String,
+  secret: String
 });
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
 const User = mongoose.model("User", userSchema);
 
-passport.serializeUser(function (user, done) {
+passport.use(User.createStrategy());
+
+passport.serializeUser(function(user, done) {
   done(null, user.id);
 });
 
-passport.deserializeUser(function (id, done) {
-  User.findById(id)
-    .then(function (user) {
-      done(null, user);
-    })
-    .catch(function (err) {
-      done(err, null);
-    });
+passport.deserializeUser(function(id, done) {
+  User.findById(id).then(function(user) {
+    done(null, user);
+  }).catch(function(err) {
+    done(err, null);
+  });
 });
 
 passport.use(
@@ -158,13 +157,13 @@ app.get("/logout", function (req, res) {
   res.redirect("/");
 });
 
+
 app.post("/register", async function (req, res) {
   const newUsername = req.body.username;
   const newPassword = req.body.password;
 
   try {
     const existingUser = await User.findOne({ username: newUsername });
-
     if (existingUser) {
       // User already exists, redirect to register with a message
       console.log("already registered");
@@ -172,21 +171,29 @@ app.post("/register", async function (req, res) {
         registrationMessage: "User already registered. Please log in.",
       });
     }
-
     // User doesn't exist, proceed with registration
-    const user = new User({ username: newUsername });
-    await user.setPassword(newPassword);
-    await user.save();
-
-    // Registration successful, redirect to login
-    res.render("login", {
-      registrationMessage: "Registration successful. Please log in.",
+    User.register({ username: newUsername }, newPassword, function (err, user) {
+      if (err) {
+        console.log(err);
+        console.log("abc");
+        res.render("register", {
+          registrationMessage: "Registration Failed! Please try again",
+        });
+      } else {
+        passport.authenticate("local")(req, res, function () {
+          console.log(req);
+          console.log(res);
+          res.redirect("/secrets");
+        });
+      }
     });
   } catch (err) {
     console.log(err);
     res.redirect("/register");
-  }
+  }  
 });
+
+
 
 app.post("/login", function (req, res) {
   const user = new User({
