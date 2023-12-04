@@ -195,22 +195,41 @@ app.post("/register", async function (req, res) {
 
 
 
-app.post("/login", function (req, res) {
+app.post("/login", async function (req, res) {
   const user = new User({
     username: req.body.username,
     password: req.body.password,
   });
 
-  req.login(user, function (err) {
-    if (err) {
-      console.log(err);
-    } else {
-      passport.authenticate("local")(req, res, function () {
-        res.redirect("/secrets");
-      });
-    }
-  });
+  try {
+    const existingUser = await User.findOne({ username: user.username });
+
+    req.login(user, function (err) {
+      if (err) {
+        console.log(err);
+      } else if (existingUser) {
+        passport.authenticate("local", { failureFlash: true })(req, res, function (err) {
+          if (err) {
+            // Handle other errors if needed
+            console.log(err);
+            return res.render("login", {
+              registrationMessage: "Login Failed! Password is wrong",
+            });
+          }
+          // Authentication successful, redirect to secrets
+          res.redirect("/secrets");
+        });
+      } else {
+        return res.render("home", {
+          registrationMessage: "User Not Registered! Please Register First",
+        });
+      }
+    });
+  } catch (err) {
+    console.log(err);
+  }
 });
+
 
 app.listen(3000, function () {
   console.log("Server started on port 3000");
