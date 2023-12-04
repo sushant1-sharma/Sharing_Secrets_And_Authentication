@@ -34,16 +34,15 @@ mongoose.connect(
   `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.piqwrgw.mongodb.net/AuthenticationSecurity`,
   {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
   }
 );
-
 
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
-  secret: String
+  secret: String,
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -52,16 +51,18 @@ const User = mongoose.model("User", userSchema);
 
 passport.use(User.createStrategy());
 
-passport.serializeUser(function(user, done) {
+passport.serializeUser(function (user, done) {
   done(null, user.id);
 });
 
-passport.deserializeUser(function(id, done) {
-  User.findById(id).then(function(user) {
-    done(null, user);
-  }).catch(function(err) {
-    done(err, null);
-  });
+passport.deserializeUser(function (id, done) {
+  User.findById(id)
+    .then(function (user) {
+      done(null, user);
+    })
+    .catch(function (err) {
+      done(err, null);
+    });
 });
 
 passport.use(
@@ -157,7 +158,6 @@ app.get("/logout", function (req, res) {
   res.redirect("/");
 });
 
-
 app.post("/register", async function (req, res) {
   const newUsername = req.body.username;
   const newPassword = req.body.password;
@@ -190,10 +190,8 @@ app.post("/register", async function (req, res) {
   } catch (err) {
     console.log(err);
     res.redirect("/register");
-  }  
+  }
 });
-
-
 
 app.post("/login", async function (req, res) {
   const user = new User({
@@ -208,17 +206,21 @@ app.post("/login", async function (req, res) {
       if (err) {
         console.log(err);
       } else if (existingUser) {
-        passport.authenticate("local", { failureFlash: true })(req, res, function (err) {
-          if (err) {
-            // Handle other errors if needed
-            console.log(err);
-            return res.render("login", {
-              registrationMessage: "Login Failed! Password is wrong",
-            });
+        passport.authenticate("local", { failureFlash: true })(
+          req,
+          res,
+          function (err) {
+            if (err) {
+              // Handle other errors if needed
+              console.log(err);
+              return res.render("login", {
+                registrationMessage: "Login Failed! Password is wrong",
+              });
+            }
+            // Authentication successful, redirect to secrets
+            res.redirect("/secrets");
           }
-          // Authentication successful, redirect to secrets
-          res.redirect("/secrets");
-        });
+        );
       } else {
         return res.render("home", {
           registrationMessage: "User Not Registered! Please Register First",
@@ -229,7 +231,6 @@ app.post("/login", async function (req, res) {
     console.log(err);
   }
 });
-
 
 app.listen(3000, function () {
   console.log("Server started on port 3000");
