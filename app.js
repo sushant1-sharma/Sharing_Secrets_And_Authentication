@@ -42,8 +42,9 @@ const userSchema = new mongoose.Schema({
   email: String,
   password: String,
   googleId: String,
-  secret: String,
+  secrets: [String]
 });
+
 
 userSchema.plugin(passportLocalMongoose);
 userSchema.plugin(findOrCreate);
@@ -113,16 +114,32 @@ app.get("/register", function (req, res) {
 });
 
 app.get("/secrets", function (req, res) {
-  User.find({ secret: { $ne: null } })
-    .then(function (foundUsers) {
-      if (foundUsers) {
-        res.render("secrets", { usersWithSecrets: foundUsers });
-      }
-    })
-    .catch(function (err) {
-      console.log(err);
-    });
+  // Check if the user is authenticated
+  if (req.isAuthenticated()) {
+    // Use the User model to find the currently logged-in user and their secrets
+    User.findById(req.user.id)
+      .then(function (foundUser) {
+        if (foundUser && foundUser.secrets.length>0) {
+          // Render the "secrets" view with the secrets of the currently logged-in user
+          console.log("user is " , foundUser);
+          console.log("Secret is " , foundUser.secrets);
+          res.render("secrets", { usersWithSecrets: [foundUser] });
+        }
+        else{
+          res.render("secrets", { SecretMessage: "No Secrets Yet! Submit A Secret" });
+        }
+      })
+      .catch(function (err) {
+        // Handle errors by logging them to the console
+        console.log(err);
+        res.redirect("/login"); // Redirect to login page in case of an error
+      });
+  } else {
+    // Redirect to the login page if the user is not authenticated
+    res.redirect("/login");
+  }
 });
+
 
 app.get("/submit", function (req, res) {
   if (req.isAuthenticated()) {
@@ -141,7 +158,7 @@ app.post("/submit", function (req, res) {
   User.findById(req.user.id)
     .then(function (foundUser) {
       if (foundUser) {
-        foundUser.secret = submittedSecret;
+        foundUser.secrets.push(submittedSecret);
         return foundUser.save();
       }
     })
